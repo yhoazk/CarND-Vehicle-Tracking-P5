@@ -2,9 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
+# no imgs by default
+*.jpg
+*.png
+
 
 # C extensions
 *.so
+# vim sw
+*.sw*
 
 # Distribution / packaging
 .Python
@@ -20,9 +26,11 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.idea/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -36,6 +44,7 @@ pip-delete-this-directory.txt
 
 # Unit test / coverage reports
 htmlcov/
+exportToHTML/
 .tox/
 .coverage
 .coverage.*
@@ -66,7 +75,7 @@ docs/_build/
 # PyBuilder
 target/
 
-# IPython Notebook
+# Jupyter Notebook
 .ipynb_checkpoints
 
 # pyenv
@@ -79,6 +88,7 @@ celerybeat-schedule
 .env
 
 # virtualenv
+.venv/
 venv/
 ENV/
 
