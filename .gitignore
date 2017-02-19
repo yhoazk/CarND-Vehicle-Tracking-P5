@@ -5,6 +5,7 @@ __pycache__/
 # no imgs by default
 *.jpg
 *.png
+*.mp4
 
 
 # C extensions

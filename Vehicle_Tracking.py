@@ -13,11 +13,14 @@ if "__main__" == __name__:
     clf = SVM_Classifier()
     line_lane = lane_detector()
 
-    img_proc.read_video("./project_video.mp4", "png")
+    img_proc.read_video("./project_video.mp4", "jpg")
+    # test on single image
     img = img_proc.get_frame(t=3)
-    #clf.classify(img)
+    clf.classify(img)
+    print("done")
+    exit()
     # Add both images
-    img_proc.process(lambda img: cv2.addWeighted(clf.classify(img), 0.8, line_lane.process(img), 0.4, 0))
+    img_proc.process(lambda img: cv2.addWeighted(clf.classify(line_lane.camera.undistort(img)), 0.8, line_lane.process(img), 0.4, 0))
     #plt.imshow(img)
     #plt.show()
     # process the video, take the output of both and add the result
