@@ -36,11 +36,16 @@ class SVM_Classifier():
         try:
             with open(self.model_pickle_path, "rb") as pick_clf:
                 self.classifier = pickle.load(pick_clf)
+
+            with open("scaler.p", "rb") as pick_sclr:
+                self.scaler = pickle.load(pick_sclr)
                 self.trained = True
         except:
             #self.classifier = LinearSVC(clf_params)
             self.classifier = LinearSVC()
             self.trained = False
+            self.scaler = None
+
 
         # Target resize for each window
         self.tgt_resize = (32,32)
@@ -55,7 +60,6 @@ class SVM_Classifier():
         self.dataset = {}
         self.labels = None
         self.features = None
-        self.scaler = None
 
     def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None],
                     xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
@@ -191,6 +195,11 @@ class SVM_Classifier():
         ftrs = np.float64(np.vstack((self.feat_p, self.feat_n)))
         self.scaler = StandardScaler()
         self.features = self.scaler.fit_transform(ftrs)
+        # save the scaler
+        with open("scaler.p", "wb") as scaler_p:
+            pickle.dump(self.scaler, scaler_p)
+            print("Fitted scaler saved")
+
         # the data will be shuffled when trainig
 
     def __train(self, X,Y ):
@@ -208,6 +217,7 @@ class SVM_Classifier():
         score = self.classifier.score(X_test, y_test)
         if score > 0.9:
             pickle.dump(self.classifier, open(self.model_pickle_path, "wb"))
+            print("Trained classifier saved")
         print('Test Accuracy of SVC = ', self.classifier.score(X_test, y_test))
 
     def predict(self, X):
@@ -217,7 +227,6 @@ class SVM_Classifier():
         :return:
         """
         feat = self.scaler.transform(self.__extract(X))
-
         pred =  self.classifier.predict(feat)
         print(pred)
         return pred
@@ -234,8 +243,10 @@ class SVM_Classifier():
 
         """
         if self.trained == True:
-            return img # TODO: implement
-            predict(mpimg.imread("/home/porko/workspace/nd_selfDrive/non-vehicles/Extras/extra198.png"))
+            #return img # TODO: implement
+
+            return self.predict(img)
+
         else:
             # Train
             self.__extract_images()
