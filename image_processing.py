@@ -20,7 +20,6 @@ class Image_Processing:
         :return: Image
         """
         if self.clip != None:
-            print(tmp_storage+"test_image_"+str(t)+str(self.frame)+".jpg")
             self.clip.save_frame(tmp_storage+"test_image_"+str(t)+str(self.frame)+".jpg")
             img = npimg.imread(tmp_storage+"test_image_"+str(t)+str(self.frame)+".jpg")
             self.frame += 1
