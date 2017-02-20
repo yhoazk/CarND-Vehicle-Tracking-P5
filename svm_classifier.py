@@ -46,7 +46,6 @@ class SVM_Classifier():
             self.trained = False
             self.scaler = None
 
-
         # Target resize for each window
         self.tgt_resize = (32,32)
         #type of image to train
@@ -61,42 +60,48 @@ class SVM_Classifier():
         self.labels = None
         self.features = None
 
-    def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None],
-                    xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
-        # If x and/or y start/stop positions not defined, set to image size
-        if None in x_start_stop or None in y_start_stop:
-            x_start_stop = [0, img.shape[1]]
-            y_start_stop = [0, img.shape[0]]
-        # Compute the span of the region to be searched
-        x_len = x_start_stop[1] - x_start_stop[0]
-        y_len = y_start_stop[1] - y_start_stop[0]
+    #def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
 
-        xspan = x_start_stop[1] - x_start_stop[0]
-        yspan = y_start_stop[1] - y_start_stop[0]
-        # Compute the number of pixels per step in x/y
-        nx_pix_per_step = np.int(xy_window[0] * (1 - xy_overlap[0]))
-        ny_pix_per_step = np.int(xy_window[1] * (1 - xy_overlap[1]))
-        # Compute the number of windows in x/y
-        nx_windows = np.int(xspan / nx_pix_per_step) - 1
-        ny_windows = np.int(yspan / ny_pix_per_step) - 1
-        # Initialize a list to append window positions to
-        window_list = []
-        # Loop through finding x and y window positions
-        # Note: you could vectorize this step, but in practice
-        # you'll be considering windows one by one with your
-        # classifier, so looping makes sense
-        for ys in range(ny_windows):
-            for xs in range(nx_windows):
-                # Calculate window position
-                startx = xs * nx_pix_per_step + x_start_stop[0]
-                endx = startx + xy_window[0]
-                starty = ys * ny_pix_per_step + y_start_stop[0]
-                endy = starty + xy_window[1]
 
-                # Append window position to list
-                window_list.append(((startx, starty), (endx, endy)))
-        # Return the list of windows
-        return window_list
+    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None, None], xy_w=(32, 32), xy_overlap=(0.4, 0.4), sweep=7):
+        """
+        Generate an array of tuples where each tuple contains the top-left corner and
+        bottom-right coordinates for each box. The boxes vary in size, as the feature extraction
+        function resizes the image. The boxes are 32x32 in the top of the image as is there where
+        the cars are expected to appear small and as we come to the bottom the images increase to
+        128x128
+        :param img:
+        :param x_start_stop:
+        :param y_start_stop:
+        :param xy_window:
+        :param xy_overlap:
+        :return:
+        """
+        if None in x_s_t or None in y_s_t:
+            x_s_t = [0, img.shape[1]]
+            y_s_t = [0, img.shape[0]]
+
+        x_range = x_s_t[1] - x_s_t[0]
+        y_range = y_s_t[1] - y_s_t[0]
+
+        # define window sizes
+        w_sizes = np.linspace(32, 140, 7,
+                              dtype="int32")  # array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
+        #  given the overlap find the y start points
+        y_start_points = [y_s_t[0]]
+        y_start_points.extend([y_s_t[0] + (1.0 - xy_overlap[1]) * x for x in w_sizes])
+        print(y_start_points)
+        windows = []
+        for start_pt, w_size in zip(y_start_points, w_sizes):
+            # calculate the number of windows in the first row, and iterate to create them
+            # find increment per window
+            w_inc = int(w_size * (1.0 - xy_overlap[0]))
+            wind_per_row = int(x_range / w_inc)
+            for x_start in range(x_s_t[0], x_s_t[1], w_inc):
+                w = ((int(x_start), int(start_pt)), (int(x_start + w_size), int(start_pt + w_size)))
+                if w[1][0] < x_s_t[1]:
+                    windows.append(w)
+        return windows
 
     def __get_nextWindow(self):
         pass
@@ -240,21 +245,37 @@ class SVM_Classifier():
         Boxing
         :param img:
         :return: Returns the image with the boxes applied and and car object
-
         """
-        if self.trained == True:
-            #return img # TODO: implement
-
-            return self.predict(img)
-
-        else:
+        rects = []
+        if self.trained != True:
             # Train
             self.__extract_images()
             self.__train(self.features, self.labels)
-
             self.trained = True
-            test_img = mpimg.imread("/home/porko/workspace/nd_selfDrive/non-vehicles/Extras/extra198.png")
-            plt.imshow(test_img)
+
+        #calculate the search windows
+        self.windows = self.__get_windows(img, [80,1200], [375,700])
+        # get the features from the complete image
+        glb_feat = None
+        for window in self.windows:
+            # get the features for the region
+            #feat = self._
+            # does the region contains a car?
+            region = img[window[0][0]:window[1][0],window[0][1]:window[1][1]]
+            plt.imshow(region)
             plt.show()
-            self.predict(test_img)
+            time.sleep(0.5)
+            plt.close()
+            print(region.shape)
+            pred = self.predict(region)
+            # add the result to the heat map array
+            if pred[0] == 1.0:
+                rects.append(window)
+        img_draw = self.__draw_rect(img, rects)
+        plt.imshow(img_draw)
+        plt.show()
+        #calculate the boxes for each vehicle
+        #draw the boxes in the image
+
+        return self.predict(img)
 

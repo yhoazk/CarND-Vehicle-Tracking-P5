@@ -24,25 +24,21 @@ def plot_imgArr(img_arr, label=None, predict=None, gray=False, n=2):
             subplt.set_title("st:" + str(label[n]) + "p:" + str(predict[n]))
     plt.show()
 
-
-
-
-
 def test_classifier():
     p_imgs = glob("../vehicles/**/*.png", recursive=True)
     n_imgs = glob("../non-vehicles/**/*.png", recursive=True)
 
     imgs = []
     labels =[]
-    sample = rnd.sample(p_imgs + n_imgs, 8)
+    sample = rnd.sample(p_imgs + n_imgs, 10)
 
     for p in sample:
         img = mpimg.imread(p)
         imgs.append(img)
-        pred = clf.classify(img)
+        pred = clf.predict(img)
         labels.append(pred)
 
-    plot_imgArr(imgs, labels, n=4)
+    plot_imgArr(imgs, labels, n=5)
 
 
 
@@ -52,12 +48,12 @@ if "__main__" == __name__:
     img_proc = Image_Processing()
     clf = SVM_Classifier()
     line_lane = lane_detector()
+    #test_classifier()
 
-    #img_proc.read_video("./project_video.mp4", "jpg")
+    img_proc.read_video("./project_video.mp4", "jpg")
     # test on single image
-    #img = img_proc.get_frame(t=3)
-    #clf.classify(img)
-    test_classifier()
+    img = img_proc.get_frame(t=16)
+    clf.classify(img)
     print("done")
     exit()
     # Add both images
