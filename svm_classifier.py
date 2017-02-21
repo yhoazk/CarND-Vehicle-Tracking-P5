@@ -63,43 +63,31 @@ class SVM_Classifier():
     #def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
 
 
-    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None, None], xy_w=(32, 32), xy_overlap=(0.4, 0.4), sweep=7):
-        """
-        Generate an array of tuples where each tuple contains the top-left corner and
-        bottom-right coordinates for each box. The boxes vary in size, as the feature extraction
-        function resizes the image. The boxes are 32x32 in the top of the image as is there where
-        the cars are expected to appear small and as we come to the bottom the images increase to
-        128x128
-        :param img:
-        :param x_start_stop:
-        :param y_start_stop:
-        :param xy_window:
-        :param xy_overlap:
-        :return:
-        """
-        if None in x_s_t or None in y_s_t:
+    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.4,0.7),sweep=7):
+        if None in x_s_t:
             x_s_t = [0, img.shape[1]]
+        if None in y_s_t:
             y_s_t = [0, img.shape[0]]
 
         x_range = x_s_t[1] - x_s_t[0]
         y_range = y_s_t[1] - y_s_t[0]
 
-        # define window sizes
-        w_sizes = np.linspace(32, 140, 7,
-                              dtype="int32")  # array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
+        #define window sizes
+        w_sizes = np.linspace(64,200,6, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
         #  given the overlap find the y start points
         y_start_points = [y_s_t[0]]
-        y_start_points.extend([y_s_t[0] + (1.0 - xy_overlap[1]) * x for x in w_sizes])
+        y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
         print(y_start_points)
-        windows = []
-        for start_pt, w_size in zip(y_start_points, w_sizes):
+        windows=[]
+        for start_pt, w_size in zip(y_start_points,w_sizes):
             # calculate the number of windows in the first row, and iterate to create them
             # find increment per window
-            w_inc = int(w_size * (1.0 - xy_overlap[0]))
-            wind_per_row = int(x_range / w_inc)
-            for x_start in range(x_s_t[0], x_s_t[1], w_inc):
-                w = ((int(x_start), int(start_pt)), (int(x_start + w_size), int(start_pt + w_size)))
+            w_inc = int(w_size * (1.0-xy_overlap[0]))
+            wind_per_row = int(x_range/w_inc)
+            for x_start in range(x_s_t[0],x_s_t[1],w_inc):
+                w = ((int(x_start),int(start_pt)),(int(x_start+w_size), int(start_pt+w_size)))
                 if w[1][0] < x_s_t[1]:
+                    print(w)
                     windows.append(w)
         return windows
 
@@ -139,7 +127,7 @@ class SVM_Classifier():
             self.hog_array = hog(img,orient,pixels_per_cell=(ppc,ppc),cells_per_block=(cpb,cpb),visualise=vis,feature_vector=f_vect)
         return self.hog_array, hog_img
 
-    def __draw_rect(self,img, bboxes, color=(0, 0, 255), thick=6):
+    def __draw_rect_t(self,img, bboxes, color=(0, 0, 255), thick=6):
         # Make a copy of the image
         imcopy = np.copy(img)
         # Iterate through the bounding boxes
@@ -149,7 +137,23 @@ class SVM_Classifier():
         # Return the image copy with boxes drawn
         return imcopy
 
-
+    def __draw_rect(self, img, bboxes, color=(0, 0, 255), thick=6):
+        # Make a copy of the image
+        # Iterate through the bounding boxes
+        imcopy = np.copy(img)
+        for n, bbox in enumerate(bboxes):
+            # Draw a rectangle given bbox coordinates
+            cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+            cv2.imshow("_", imcopy)
+            section = imcopy[bbox[0][1]:bbox[1][1], bbox[0][0]:bbox[1][0]]
+            print(
+                str(section.shape) + "::" + str(bbox[0][0]) + ":" + str(bbox[1][0]) + "," + str(bbox[0][1]) + ":" + str(
+                    bbox[1][1]))
+            cv2.imwrite("sample_" + str(n) + ".png", section)
+            cv2.waitKey(200)
+        # Return the image copy with boxes drawn
+        cv2.destroyAllWindows()
+        return imcopy
 
 
     def __extract(self, img):
@@ -254,26 +258,28 @@ class SVM_Classifier():
             self.trained = True
 
         #calculate the search windows
-        self.windows = self.__get_windows(img, [80,1200], [375,700])
+        self.windows = self.__get_windows(img, y_s_t= [375,670])
         # get the features from the complete image
         glb_feat = None
         for window in self.windows:
             # get the features for the region
             #feat = self._
             # does the region contains a car?
-            region = img[window[0][0]:window[1][0],window[0][1]:window[1][1]]
-            plt.imshow(region)
-            plt.show()
-            time.sleep(0.5)
-            plt.close()
-            print(region.shape)
+            region = img[window[0][1]:window[1][1],window[0][0]:window[1][0]]
+         #   time.sleep(0.5)
+         #   plt.close()
             pred = self.predict(region)
             # add the result to the heat map array
             if pred[0] == 1.0:
+                cv2.imshow("-",region)
+                cv2.waitKey(900)
                 rects.append(window)
+        cv2.destroyAllWindows()
+        print("Windows found: "+ str(len(rects)))
         img_draw = self.__draw_rect(img, rects)
         plt.imshow(img_draw)
         plt.show()
+        time.sleep(.1)
         #calculate the boxes for each vehicle
         #draw the boxes in the image
 
