@@ -64,7 +64,7 @@ class SVM_Classifier():
     #def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
 
 
-    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.4,0.7),sweep=7):
+    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.6,0.6),sweep=7):
         if None in x_s_t:
             x_s_t = [0, img.shape[1]]
         if None in y_s_t:
@@ -146,12 +146,12 @@ class SVM_Classifier():
             # Draw a rectangle given bbox coordinates
             cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
         #    cv2.imshow("_", imcopy)
-            cv2.imshow("_", imcopy)
+        #     cv2.imshow("_", imcopy)
             section = imcopy[bbox[0][1]:bbox[1][1], bbox[0][0]:bbox[1][0]]
             print(
                 str(section.shape) + "::" + str(bbox[0][0]) + ":" + str(bbox[1][0]) + "," + str(bbox[0][1]) + ":" + str(
                     bbox[1][1]))
-            plt.imsave("sample_" + str(n) + ".png", section)
+            # plt.imsave("sample_" + str(n) + ".png", section)
 #            cv2.waitKey(200)
         # Return the image copy with boxes drawn
         #cv2.destroyAllWindows()
@@ -167,9 +167,8 @@ class SVM_Classifier():
         # resize the image to tgt_sze
         # convert to gray for hog
         img = cv2.resize(img, self.tgt_resize)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-        gray = cv2.cvtColor(img.copy(), cv2.COLOR_RGB2GRAY)
-        feat, img_hog = self.__hog(gray,  orient=9, ppc=8, cpb=3, vis=True, f_vect=False)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        feat, img_hog = self.__hog(img[:,:,1],  orient=9, ppc=8, cpb=3, vis=True, f_vect=False)
         # XXX: The features have a shape 7x7x2x9
         bin_feat = self.__bin_spatial(img)
         hist_feat = self.__color_hist(img) #, nbins=self.hist_bins, bins_range=self.bin_range )
@@ -273,19 +272,22 @@ class SVM_Classifier():
             print("Region:"+ str(region.shape))
             pred = self.predict(region)
             # add the result to the heat map array
+            if self.debug == True:
+                plt.imshow(region)
+                plt.title(str(pred))
+                plt.show()
             if int(pred[0]) == 1:
-                cv2.imshow(str(int(pred[0])),region)
-                cv2.waitKey(200)
+                # cv2.imshow(str(int(pred[0])),region)
+                # cv2.waitKey(200)
                 rects.append(window)
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
         print("Windows found: "+ str(len(rects)))
         img_draw = self.__draw_rect(img, rects)
         del rects
-        plt.imshow(img_draw)
-        plt.show()
-        time.sleep(.1)
+        # plt.imshow(img_draw)
+        # plt.show()
         #calculate the boxes for each vehicle
         #draw the boxes in the image
 
-        return self.predict(img)
+        return img_draw
 
