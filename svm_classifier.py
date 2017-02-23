@@ -146,6 +146,7 @@ class SVM_Classifier():
             # Draw a rectangle given bbox coordinates
             cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
         #    cv2.imshow("_", imcopy)
+            cv2.imshow("_", imcopy)
             section = imcopy[bbox[0][1]:bbox[1][1], bbox[0][0]:bbox[1][0]]
             print(
                 str(section.shape) + "::" + str(bbox[0][0]) + ":" + str(bbox[1][0]) + "," + str(bbox[0][1]) + ":" + str(
@@ -270,8 +271,6 @@ class SVM_Classifier():
             # does the region contains a car?
             region = img[window[0][1]:window[1][1],window[0][0]:window[1][0]]
             print("Region:"+ str(region.shape))
-         #   time.sleep(0.5)
-         #   plt.close()
             pred = self.predict(region)
             # add the result to the heat map array
             if int(pred[0]) == 1:
