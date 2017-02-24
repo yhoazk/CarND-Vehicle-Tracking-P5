@@ -243,6 +243,7 @@ class SVM_Classifier():
             pickle.dump(self.classifier, open(self.model_pickle_path, "wb"))
             print("Trained classifier saved")
         print('Test Accuracy of SVC = ', self.classifier.score(X_test, y_test))
+        time.sleep(5)
 
     def predict(self, X):
         """
