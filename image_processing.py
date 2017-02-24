@@ -29,5 +29,3 @@ class Image_Processing:
     def process(self, processing_fnc, output_name="out_video"):
         self.proc_clip = self.clip.fl_image(processing_fnc)
         self.proc_clip.write_videofile("./out_video.mp4", audio=False)
-
-

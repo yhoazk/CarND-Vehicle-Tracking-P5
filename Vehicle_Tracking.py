@@ -33,7 +33,7 @@ def test_classifier():
     sample = rnd.sample(p_imgs + n_imgs, 10)
 
     for p in sample:
-        img = mpimg.imread(p)
+        img = clf.get_normImg(p)
         imgs.append(img)
         pred = clf.predict(img)
         labels.append(pred)
@@ -41,28 +41,28 @@ def test_classifier():
     plot_imgArr(imgs, labels, n=5)
 
 def test_classifier2():
-    imgs_f = glob("./*.png")
+    imgs_f = glob("./window_gen/*_24.png")
 
     print(imgs_f)
     imgs = []
     labels =[]
 
     for p in imgs_f:
-        img = mpimg.imread(p)
+        img = clf.get_normImg(p)
         print("::"+ str(img.shape))
         imgs.append(img)
         pred = clf.predict(img)
         labels.append(pred)
         print(p + ":::::::::::::::::::::::::::::::::::" + str(int(pred[0]) == 1))
         #if int(pred[0]) != 0:
-        plt.imshow(img)
-        plt.show()
+        cv2.imshow(str(int(pred[0])), img)
+        cv2.waitKey(1200)
+    cv2.destroyAllWindows()
     # plot_imgArr(imgs, labels, n=5)
 
 
 def main_fnc(img):
-    img = line_lane.camera.undistort(img)
-    img = np.multiply(1/255, img, dtype="float32")
+    # img = line_lane.camera.undistort(img)
     img = clf.classify(img)
     return  img
 
@@ -70,16 +70,15 @@ if "__main__" == __name__:
     # create the instances of the image processing class and SVM Classifier
     img_proc = Image_Processing()
     clf = SVM_Classifier()
-    line_lane = lane_detector()
+    # line_lane = lane_detector()
 
     #test_classifier()
     #test_classifier()
     #test_classifier()
 
-    # test_classifier2()
-
-    # img_proc.read_video("./project_video.mp4", "jpg")
-    # img_proc.process(main_fnc)
+    test_classifier2()
+    # img_proc.read_video("project_video.mp4", "jpg")
+    # img_proc.process(clf.classify)
     # img_proc.get_frame(t=20)
     # exit()
     # test on single image
@@ -87,31 +86,34 @@ if "__main__" == __name__:
     # clf.classify(img)
     # img = mpimg.imread("./test_images/test4.jpg")#img_proc.get_frame(t=16)
     # clf.classify(img)
-    img = mpimg.imread("./test_images/test6.jpg")#img_proc.get_frame(t=16)
+    # img_proc.process(clf.classify)
+
+
+    img = clf.get_normImg("./test_images/test6.jpg")#img_proc.get_frame(t=16)
     img=main_fnc(img)
     plt.imshow(img)
     plt.show()
-    img = mpimg.imread("./test_images/test1.jpg")#img_proc.get_frame(t=16)
+    img = clf.get_normImg("./test_images/test1.jpg")#img_proc.get_frame(t=16)
     img=main_fnc(img)
     plt.imshow(img)
     plt.show()
 
-    img = mpimg.imread("./test_images/test2.jpg")#img_proc.get_frame(t=16)
+    img = clf.get_normImg("./test_images/test2.jpg")#img_proc.get_frame(t=16)
     img=main_fnc(img)
     plt.imshow(img)
     plt.show()
 
-    img = mpimg.imread("./test_images/test3.jpg")#img_proc.get_frame(t=16)
+    img = clf.get_normImg("./test_images/test3.jpg")#img_proc.get_frame(t=16)
     img=main_fnc(img)
     plt.imshow(img)
     plt.show()
 
-    img = mpimg.imread("./test_images/test4.jpg")#img_proc.get_frame(t=16)
+    img = clf.get_normImg("./test_images/test4.jpg")#img_proc.get_frame(t=16)
     img=main_fnc(img)
     plt.imshow(img)
     plt.show()
 
-    img = mpimg.imread("./test_images/test5.jpg")#img_proc.get_frame(t=16)
+    img = clf.get_normImg("./test_images/test5.jpg")#img_proc.get_frame(t=16)
     img=main_fnc(img)
     plt.imshow(img)
     plt.show()
@@ -121,7 +123,6 @@ if "__main__" == __name__:
     print("done")
     # Add both images
     #img_proc.process(lambda img: cv2.addWeighted(clf.classify(line_lane.camera.undistort(img)), 0.8, line_lane.process(img), 0.4, 0))
-
     #plt.imshow(img)
     #plt.show()
     # process the video, take the output of both and add the result

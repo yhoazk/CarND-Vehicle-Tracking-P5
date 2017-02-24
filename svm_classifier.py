@@ -13,6 +13,7 @@ import matplotlib.image as mpimg
 from tqdm import tqdm
 import time
 import pickle
+from scipy.misc import *
 
 
 class SVM_Classifier():
@@ -42,13 +43,13 @@ class SVM_Classifier():
                 self.scaler = pickle.load(pick_sclr)
                 self.trained = True
         except:
-            self.classifier = LinearSVC(C=0.0001, max_iter=5000)
+            self.classifier = LinearSVC(C=0.0001)
             #self.classifier = svm.SVC( C=1.0, kernel='rbf', max_iter=-1)
             self.trained = False
             self.scaler = None
 
         # Target resize for each window
-        self.tgt_resize = (32,32)
+        self.tgt_resize = (64,64)
         #type of image to train
 
         #self positive image dataset
@@ -74,7 +75,7 @@ class SVM_Classifier():
         y_range = y_s_t[1] - y_s_t[0]
 
         #define window sizes
-        w_sizes = np.linspace(64,230,5, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
+        w_sizes = np.linspace(64,205,6, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
         #  given the overlap find the y start points
         y_start_points = [y_s_t[0]]
         y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
@@ -116,11 +117,11 @@ class SVM_Classifier():
         # Concatenate the histograms into a single feature vector
         #
         hist_features = np.concatenate((channel1_hist[0], channel2_hist[0], channel3_hist[0]))
-        #hist_features = channel2_hist[0]
+        # hist_features = channel3_hist[0]
         # Return the individual histograms, bin_centers and feature vector
         return hist_features
 
-    def __hog(self, img, orient=9, ppc=8, cpb=2, vis=False, f_vect=False):
+    def __hog(self, img, orient=8, ppc=8, cpb=2, vis=False, f_vect=False):
         hog_img = None
         if vis:
             self.hog_array, hog_img = hog(img,orient,pixels_per_cell=(ppc,ppc),cells_per_block=(cpb,cpb),visualise=vis,feature_vector=f_vect)
@@ -166,18 +167,30 @@ class SVM_Classifier():
         """
         # resize the image to tgt_sze
         # convert to gray for hog
-        img = cv2.resize(img, self.tgt_resize)
+        img = imresize(img, self.tgt_resize)
+        # cv2.imshow("32",img)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-        feat, img_hog = self.__hog(img[:,:,1],  orient=9, ppc=8, cpb=3, vis=True, f_vect=False)
+        # plt.imshow(img[:,:,1])
+        # plt.show()
+        feat, img_hog = self.__hog(img[:,:,2],  orient=8, ppc=8, cpb=3, vis=True, f_vect=True)
         # XXX: The features have a shape 7x7x2x9
         bin_feat = self.__bin_spatial(img)
         hist_feat = self.__color_hist(img) #, nbins=self.hist_bins, bins_range=self.bin_range )
-        #self.debug = True
-        if self.debug:
-            plt.imshow(img_hog)
-            plt.show()
-        return np.concatenate((bin_feat,  feat.ravel(), hist_feat))
+        # self.debug = True
+        # if self.debug:
+        cv2.imshow("32",img_hog)
+
+        return np.concatenate((bin_feat,  feat, hist_feat))
         #return feat.ravel()
+    def get_normImg(self, path):
+        # Read the image, the result is BGR 0-255
+        img = cv2.imread(path, cv2.IMREAD_COLOR)
+        # From BGR to RGB
+        img = img[..., ::-1]
+        # normalize the image to 0-1 values
+        norm_image = cv2.normalize(img, img.copy(), alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        return norm_image
+
 
     def __extract_images(self, path_p="../vehicles", path_n="../non-vehicles"):
         """
@@ -193,11 +206,11 @@ class SVM_Classifier():
             raise "No train images found!"
         print("Extracting Positive image samples")
         for img in tqdm(p_imgs):
-            self.feat_p.append(self.__extract(mpimg.imread(img)))
+            self.feat_p.append(self.__extract(self.get_normImg(img)))
 
         print("Extracting Negative image samples")
         for img in tqdm(n_imgs):
-            self.feat_n.append(self.__extract(mpimg.imread(img)))
+            self.feat_n.append(self.__extract(self.get_normImg(img)))
 
         self.label_p = np.ones(len(self.feat_p))
         self.label_n = np.zeros(len(self.feat_n))
@@ -269,7 +282,7 @@ class SVM_Classifier():
             #feat = self._
             # does the region contains a car?
             region = img[window[0][1]:window[1][1],window[0][0]:window[1][0]]
-            print("Region:"+ str(region.shape))
+            # print("Region:"+ str(region.shape))
             pred = self.predict(region)
             # add the result to the heat map array
             if self.debug == True:

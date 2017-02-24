@@ -41,3 +41,5 @@ https://ffmpeg.zeranoe.com/builds/
 https://software.intel.com/en-us/node/529070
 
 http://www.robots.ox.ac.uk/~joao/publications/henriques_iccv2013.pdf
+
+https://www.scivision.co/numpy-image-bgr-to-rgb/
