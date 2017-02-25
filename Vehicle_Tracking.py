@@ -45,10 +45,13 @@ def test_classifier1():
     imgs = glob("./window_gen/*.png")
 
     for p in imgs:
-        img = clf.get_normImg(p)
+        img = mpimg.imread(p)
         pred = clf.predict(img)
         if int(pred[0]) == 1:
-            cv2.imshow("im", img)
+            cv2.imshow("_-----------im", img)
+            cv2.waitKey(500)
+        else:
+            cv2.imshow("00000000000000", img)
             cv2.waitKey(500)
 
     cv2.destroyAllWindows()
@@ -69,14 +72,38 @@ def test_classifier2():
     cv2.destroyAllWindows()
     # plot_imgArr(imgs, labels, n=5)
 
+def test_classifier3():
+    imgs_f = glob("test_images/*.png")
+
+    for p in imgs_f:
+        img = clf.get_normImg(p)
+        img = main_fnc(img)
+        cv2.imshow("_", img)
+        cv2.waitKey(100)
+    cv2.destroyAllWindows()
+    # plot_imgArr(imgs, labels, n=5)
+
+
+
+
+
 
 def main_fnc(img):
     # img = line_lane.camera.undistort(img)
+
+    # test for rgb of video edit tool
+
+    # im = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    # return np.dstack((np.zeros_like(im), np.zeros_like(im), im[:,:,1]))
+    # the video function reads the video in frames RGB 0-255
+    # print(img[0][0])
+    img = cv2.normalize(img, img.copy(), alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     img = clf.classify(img)
-    cv2.imshow("IMAGE asdasdasdasd", img)
+    img = np.multiply(255,img)
+    # cv2.imshow("IMAGE asdasdasdasd", img)
     # cv2.waitKey(100)
     # cv2.destroyAllWindows()
-    return  img
+    return img
 
 if "__main__" == __name__:
     # create the instances of the image processing class and SVM Classifier
@@ -84,12 +111,13 @@ if "__main__" == __name__:
     clf = SVM_Classifier()
     # line_lane = lane_detector()
 
+    # test_classifier()
     #test_classifier()
     #test_classifier()
-    #test_classifier()
-    # test_classifier1()
-    test_classifier2()
-    # img_proc.read_video("sample_vid_9.mp4", "jpg")
+    test_classifier1()
+    # test_classifier2()
+    # test_classifier3()
+    # img_proc.read_video("sample_vid_3.mp4", "jpg")
     # img_proc.process(main_fnc)
     exit()
     # img_proc.get_frame(t=20)
@@ -99,38 +127,6 @@ if "__main__" == __name__:
     # img = mpimg.imread("./test_images/test4.jpg")#img_proc.get_frame(t=16)
     # clf.classify(img)
     # img_proc.process(clf.classify)
-
-
-    img = clf.get_normImg("./test_images/test6.jpg")#img_proc.get_frame(t=16)
-    img=main_fnc(img)
-    plt.imshow(img)
-    plt.show()
-    img = clf.get_normImg("./test_images/test1.jpg")#img_proc.get_frame(t=16)
-    img=main_fnc(img)
-    plt.imshow(img)
-    plt.show()
-
-    img = clf.get_normImg("./test_images/test2.jpg")#img_proc.get_frame(t=16)
-    img=main_fnc(img)
-    plt.imshow(img)
-    plt.show()
-
-    img = clf.get_normImg("./test_images/test3.jpg")#img_proc.get_frame(t=16)
-    img=main_fnc(img)
-    plt.imshow(img)
-    plt.show()
-
-    img = clf.get_normImg("./test_images/test4.jpg")#img_proc.get_frame(t=16)
-    img=main_fnc(img)
-    plt.imshow(img)
-    plt.show()
-
-    img = clf.get_normImg("./test_images/test5.jpg")#img_proc.get_frame(t=16)
-    img=main_fnc(img)
-    plt.imshow(img)
-    plt.show()
-
-
 
     print("done")
     # Add both images

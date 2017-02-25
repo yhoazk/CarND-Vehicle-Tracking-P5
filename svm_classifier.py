@@ -43,13 +43,13 @@ class SVM_Classifier():
                 self.scaler = pickle.load(pick_sclr)
                 self.trained = True
         except:
-            self.classifier = LinearSVC(C=0.0001)
+            self.classifier = LinearSVC(C=0.001)
             #self.classifier = svm.SVC( C=1.0, kernel='rbf', max_iter=-1)
             self.trained = False
             self.scaler = None
 
         # Target resize for each window
-        self.tgt_resize = (48, 48)
+        self.tgt_resize = (64, 64)
         self.threshold_heat = 2
         #type of image to train
 
@@ -85,7 +85,7 @@ class SVM_Classifier():
         # Return the image
         return boxes
 
-    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.6,0.5),sweep=7):
+    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.5,0.),sweep=7):
         if None in x_s_t:
             x_s_t = [0, img.shape[1]]
         if None in y_s_t:
@@ -94,25 +94,30 @@ class SVM_Classifier():
         x_range = x_s_t[1] - x_s_t[0]
         y_range = y_s_t[1] - y_s_t[0]
 
-        #define window sizes
-        w_sizes = np.linspace(72, 190, 5, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
-
+        # define window sizes
+        # w_sizes = np.linspace(72, 190, 5, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
+        w_sizes = [72, 72, 144]
+        xy_overlap = [0.75, 0.5, 0.75]
+        print(w_sizes)
+        time.sleep(2)
         #  given the overlap find the y start points
         y_start_points = [y_s_t[0]]
-        y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
-        # print(y_start_points)
-        windows=[]
-        for start_pt, w_size in zip(y_start_points,w_sizes):
+        # y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
+        y_start_points.extend([y_s_t[0] + ofst for ofst in [35, 72, 110]])
+        print(y_start_points)
+        windows = []
+        for over, start_pt, w_size in zip(xy_overlap, y_start_points, w_sizes):
             # calculate the number of windows in the first row, and iterate to create them
             # find increment per window
-            w_inc = int(w_size * (1.0-xy_overlap[0]))
-            wind_per_row = int(x_range/w_inc)
-            for x_start in range(x_s_t[0],x_s_t[1],w_inc):
-                w = ((int(x_start),int(start_pt)),(int(x_start+w_size), int(start_pt+w_size)))
+            w_inc = int(w_size * (1.0 - over))
+            wind_per_row = int(x_range / w_inc)
+            for x_start in range(x_s_t[0], x_s_t[1], w_inc):
+                w = ((int(x_start), int(start_pt)), (int(x_start + w_size), int(start_pt + w_size)))
                 if w[1][0] < x_s_t[1]:
                     # print(w)
                     windows.append(w)
         return windows
+
 
 
     def __bin_spatial(self, img, color_space='RGB'):
@@ -142,7 +147,8 @@ class SVM_Classifier():
         # Return the individual histograms, bin_centers and feature vector
         return hist_features
 
-    def __hog(self, img, orient=8, ppc=6, cpb=2, vis=False, f_vect=False):
+    def __hog(self, img_i, orient=8, ppc=6, cpb=2, vis=False, f_vect=False):
+        img = img_i.copy()
         hog_img = None
         if vis:
             self.hog_array, hog_img = hog(img,orient,pixels_per_cell=(ppc,ppc),cells_per_block=(cpb,cpb),visualise=vis,feature_vector=f_vect)
@@ -190,18 +196,25 @@ class SVM_Classifier():
         # convert to gray for hog
         img = imresize(img, self.tgt_resize)
         # cv2.imshow("32",img)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
         # plt.imshow(img[:,:,1])
         # plt.show()
-        feat, img_hog = self.__hog(img[:,:,2],  orient=8, ppc=8, cpb=2, vis=True, f_vect=True)
+        feat_1, img_hog = self.__hog(img[:,:,1],  orient=5, ppc=8, cpb=4, vis=True, f_vect=True)
+        # cv2.imshow("Cr   channel",img_hog)
+        # cv2.waitKey(100)
+        # feat_2, img_hog = self.__hog(img[:,:,2],  orient=5, ppc=8, cpb=4, vis=True, f_vect=True)
+        # cv2.imshow("Cb   channel",img_hog)
+        # cv2.waitKey(100)
         # XXX: The features have a shape 7x7x2x9
         bin_feat = self.__bin_spatial(img)
         hist_feat = self.__color_hist(img) #, nbins=self.hist_bins, bins_range=self.bin_range )
         # self.debug = True
         # if self.debug:
-        cv2.imshow("32",img_hog)
 
-        return np.concatenate((bin_feat,  feat, hist_feat))
+        return np.concatenate((bin_feat,  feat_1, hist_feat))
+        # return np.concatenate((bin_feat,  feat))
+
+
         #return feat.ravel()
     def get_normImg(self, path):
         # Read the image, the result is BGR 0-255
@@ -214,7 +227,6 @@ class SVM_Classifier():
         # normalize the image to 0-1 values
         norm_image = cv2.normalize(img, img.copy(), alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
         return norm_image
-
 
     def __extract_images(self, path_p="../vehicles", path_n="../non-vehicles"):
         """
@@ -277,7 +289,7 @@ class SVM_Classifier():
         """
         extracted = self.__extract(X)
         feat = self.scaler.transform(extracted)
-        pred =  self.classifier.predict(feat)
+        pred = self.classifier.predict(feat)
         # print(pred)
         return pred
 
@@ -292,6 +304,11 @@ class SVM_Classifier():
         if self.heat_map is None:
             self.heat_map = np.zeros_like(img[:, :, 0])
 
+        # back up the last heat map for filtering
+        self.heat_map_1 = self.heat_map.copy()
+        # start a clean heat map
+        self.heat_map = np.zeros_like(img[:, :, 0])
+
         for win in p_windows:
             self.heat_map[win[0][1]:win[1][1], win[0][0]:win[1][0]] += 1
 
@@ -301,12 +318,11 @@ class SVM_Classifier():
             a2.imshow(self.heat_map)
             plt.show()
 
-        # back up the last heat map for filtering
-        self.heat_map_1 = self.heat_map.copy()
+
         self.heat_map[self.heat_map <= self.threshold_heat] = 0
         # Average with the past heat maps
         htm = cv2.addWeighted(self.heat_map, 0.7, self.heat_map_1, 0.3, 0)
-        labels = label(htm)
+        labels = label(self.heat_map)
         new_windows = self.draw_labeled_bboxes(labels)
 
         # f,(a1,a2) = plt.subplots(1,2)
@@ -322,6 +338,7 @@ class SVM_Classifier():
         :param img:
         :return: Returns the image with the boxes applied and and car object
         """
+
         rects = []
         if self.trained != True:
             # Train
@@ -331,7 +348,7 @@ class SVM_Classifier():
 
         #calculate the search windows
         # if self.windows == None:
-        self.windows = self.__get_windows(img, y_s_t= [400,700])
+        self.windows = self.__get_windows(img, y_s_t= [390,700])
         # get the features from the complete image
         glb_feat = None
         for window in self.windows:
