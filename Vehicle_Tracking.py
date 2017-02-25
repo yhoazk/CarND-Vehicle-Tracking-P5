@@ -45,7 +45,7 @@ def test_classifier1():
     imgs = glob("./window_gen/*.png")
 
     for p in imgs:
-        img = mpimg.imread(p)
+        img = clf.get_normImg(p)
         pred = clf.predict(img)
         if int(pred[0]) == 1:
             cv2.imshow("_-----------im", img)
@@ -60,7 +60,7 @@ def test_classifier1():
 
 
 def test_classifier2():
-    imgs_f = glob("test_images/*.png")
+    imgs_f = glob("test_images/*.jpg")
     print(imgs_f)
 
     for p in imgs_f:
@@ -78,6 +78,8 @@ def test_classifier3():
     for p in imgs_f:
         img = clf.get_normImg(p)
         img = main_fnc(img)
+        img = np.multiply(255, img)
+        img[0][0]
         cv2.imshow("_", img)
         cv2.waitKey(100)
     cv2.destroyAllWindows()
@@ -114,11 +116,11 @@ if "__main__" == __name__:
     # test_classifier()
     #test_classifier()
     #test_classifier()
-    test_classifier1()
+    # test_classifier1()
     # test_classifier2()
     # test_classifier3()
-    # img_proc.read_video("sample_vid_3.mp4", "jpg")
-    # img_proc.process(main_fnc)
+    img_proc.read_video("sample_vid_3.mp4", "jpg")
+    img_proc.process(main_fnc)
     exit()
     # img_proc.get_frame(t=20)
     # test on single image
