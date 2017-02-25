@@ -6,7 +6,7 @@ from lane_detector import *
 import matplotlib.pyplot as plt
 import cv2
 import random as rnd
-import matplotlib.image as mpimg
+from glob import glob
 
 
 def plot_imgArr(img_arr, label=None, predict=None, gray=False, n=2):
@@ -42,28 +42,30 @@ def test_classifier():
 
 
 def test_classifier1():
-    imgs = glob("./test_images/*.png")
+    imgs = glob("./window_gen/*.png")
 
     for p in imgs:
         img = clf.get_normImg(p)
-        imgs.append(img)
         pred = clf.predict(img)
-        labels.append(pred)
+        if int(pred[0]) == 1:
+            cv2.imshow("im", img)
+            cv2.waitKey(500)
 
-    plot_imgArr(imgs, labels, n=5)
+    cv2.destroyAllWindows()
+    # plot_imgArr(imgs, labels, n=5)
 
 
 
 def test_classifier2():
-    imgs_f = glob("./test_images/*.png")
-
+    imgs_f = glob("test_images/*.png")
+    print(imgs_f)
 
     for p in imgs_f:
         img = clf.get_normImg(p)
         p_img = clf.classify(img)
         #if int(pred[0]) != 0:
         cv2.imshow("_", p_img)
-        cv2.waitKey(1200)
+        cv2.waitKey(100)
     cv2.destroyAllWindows()
     # plot_imgArr(imgs, labels, n=5)
 
@@ -71,6 +73,9 @@ def test_classifier2():
 def main_fnc(img):
     # img = line_lane.camera.undistort(img)
     img = clf.classify(img)
+    cv2.imshow("IMAGE asdasdasdasd", img)
+    # cv2.waitKey(100)
+    # cv2.destroyAllWindows()
     return  img
 
 if "__main__" == __name__:
@@ -82,12 +87,12 @@ if "__main__" == __name__:
     #test_classifier()
     #test_classifier()
     #test_classifier()
-
+    # test_classifier1()
     test_classifier2()
-    # img_proc.read_video("project_video.mp4", "jpg")
-    # img_proc.process(clf.classify)
-    # img_proc.get_frame(t=20)
+    # img_proc.read_video("sample_vid_9.mp4", "jpg")
+    # img_proc.process(main_fnc)
     exit()
+    # img_proc.get_frame(t=20)
     # test on single image
     # img = mpimg.imread("./test_images/test1.jpg")#img_proc.get_frame(t=16)
     # clf.classify(img)

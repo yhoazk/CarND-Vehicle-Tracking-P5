@@ -14,7 +14,7 @@ from tqdm import tqdm
 import time
 import pickle
 from scipy.misc import *
-
+from scipy.ndimage.measurements import label
 
 class SVM_Classifier():
     def __init__(self, type='LinearSVC', *clf_params):
@@ -49,7 +49,8 @@ class SVM_Classifier():
             self.scaler = None
 
         # Target resize for each window
-        self.tgt_resize = (64,64)
+        self.tgt_resize = (48, 48)
+        self.threshold_heat = 2
         #type of image to train
 
         #self positive image dataset
@@ -61,11 +62,30 @@ class SVM_Classifier():
         self.dataset = {}
         self.labels = None
         self.features = None
+        self.heat_map = None
+        self.heat_map_1 = None
+        self.heat_map_2 = None
+        self.heat_map_3 = None
 
     #def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
 
+    def draw_labeled_bboxes(self, labels):
+        # Iterate through all detected cars
+        boxes = []
+        for car_number in range(1, labels[1] + 1):
+            # Find pixels with each car_number label value
+            nonzero = (labels[0] == car_number).nonzero()
+            # Identify x and y values of those pixels
+            nonzeroy = np.array(nonzero[0])
+            nonzerox = np.array(nonzero[1])
+            # Define a bounding box based on min/max x and y
+            boxes.append(((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))))
+            # Draw the box on the image
+            # cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+        # Return the image
+        return boxes
 
-    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.6,0.6),sweep=7):
+    def __get_windows(self, img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_overlap=(0.6,0.5),sweep=7):
         if None in x_s_t:
             x_s_t = [0, img.shape[1]]
         if None in y_s_t:
@@ -75,11 +95,12 @@ class SVM_Classifier():
         y_range = y_s_t[1] - y_s_t[0]
 
         #define window sizes
-        w_sizes = np.linspace(64,205,6, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
+        w_sizes = np.linspace(72, 190, 5, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
+
         #  given the overlap find the y start points
         y_start_points = [y_s_t[0]]
         y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
-        print(y_start_points)
+        # print(y_start_points)
         windows=[]
         for start_pt, w_size in zip(y_start_points,w_sizes):
             # calculate the number of windows in the first row, and iterate to create them
@@ -89,7 +110,7 @@ class SVM_Classifier():
             for x_start in range(x_s_t[0],x_s_t[1],w_inc):
                 w = ((int(x_start),int(start_pt)),(int(x_start+w_size), int(start_pt+w_size)))
                 if w[1][0] < x_s_t[1]:
-                    print(w)
+                    # print(w)
                     windows.append(w)
         return windows
 
@@ -121,7 +142,7 @@ class SVM_Classifier():
         # Return the individual histograms, bin_centers and feature vector
         return hist_features
 
-    def __hog(self, img, orient=8, ppc=8, cpb=2, vis=False, f_vect=False):
+    def __hog(self, img, orient=8, ppc=6, cpb=2, vis=False, f_vect=False):
         hog_img = None
         if vis:
             self.hog_array, hog_img = hog(img,orient,pixels_per_cell=(ppc,ppc),cells_per_block=(cpb,cpb),visualise=vis,feature_vector=f_vect)
@@ -149,9 +170,9 @@ class SVM_Classifier():
         #    cv2.imshow("_", imcopy)
         #     cv2.imshow("_", imcopy)
             section = imcopy[bbox[0][1]:bbox[1][1], bbox[0][0]:bbox[1][0]]
-            print(
-                str(section.shape) + "::" + str(bbox[0][0]) + ":" + str(bbox[1][0]) + "," + str(bbox[0][1]) + ":" + str(
-                    bbox[1][1]))
+            # print(
+            #     str(section.shape) + "::" + str(bbox[0][0]) + ":" + str(bbox[1][0]) + "," + str(bbox[0][1]) + ":" + str(
+            #         bbox[1][1]))
             # plt.imsave("sample_" + str(n) + ".png", section)
 #            cv2.waitKey(200)
         # Return the image copy with boxes drawn
@@ -172,7 +193,7 @@ class SVM_Classifier():
         img = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
         # plt.imshow(img[:,:,1])
         # plt.show()
-        feat, img_hog = self.__hog(img[:,:,2],  orient=8, ppc=8, cpb=3, vis=True, f_vect=True)
+        feat, img_hog = self.__hog(img[:,:,2],  orient=8, ppc=8, cpb=2, vis=True, f_vect=True)
         # XXX: The features have a shape 7x7x2x9
         bin_feat = self.__bin_spatial(img)
         hist_feat = self.__color_hist(img) #, nbins=self.hist_bins, bins_range=self.bin_range )
@@ -184,7 +205,10 @@ class SVM_Classifier():
         #return feat.ravel()
     def get_normImg(self, path):
         # Read the image, the result is BGR 0-255
-        img = cv2.imread(path, cv2.IMREAD_COLOR)
+        if isinstance(path, str):
+            img = cv2.imread(path, cv2.IMREAD_COLOR)
+        else:
+            img = path
         # From BGR to RGB
         img = img[..., ::-1]
         # normalize the image to 0-1 values
@@ -254,11 +278,42 @@ class SVM_Classifier():
         extracted = self.__extract(X)
         feat = self.scaler.transform(extracted)
         pred =  self.classifier.predict(feat)
-        print(pred)
+        # print(pred)
         return pred
 
-    def __heat_map(self):
-        pass
+    def __heat_map(self, img, p_windows):
+        """
+        Function to get the are marked by a number of windows and which
+        number of windows in the area is bigger than the self.threshold_heat
+        :param post_windows:
+        :return:
+        """
+        # b/w image
+        if self.heat_map is None:
+            self.heat_map = np.zeros_like(img[:, :, 0])
+
+        for win in p_windows:
+            self.heat_map[win[0][1]:win[1][1], win[0][0]:win[1][0]] += 1
+
+        if self.debug:
+            f, (a1, a2) = plt.subplots(1, 2)
+            a1.imshow(img)
+            a2.imshow(self.heat_map)
+            plt.show()
+
+        # back up the last heat map for filtering
+        self.heat_map_1 = self.heat_map.copy()
+        self.heat_map[self.heat_map <= self.threshold_heat] = 0
+        # Average with the past heat maps
+        htm = cv2.addWeighted(self.heat_map, 0.7, self.heat_map_1, 0.3, 0)
+        labels = label(htm)
+        new_windows = self.draw_labeled_bboxes(labels)
+
+        # f,(a1,a2) = plt.subplots(1,2)
+        # a1.imshow(img)
+        # a2.imshow(labels[0])
+        # plt.show()
+        return new_windows
 
     def classify(self, img):
         """
@@ -275,18 +330,18 @@ class SVM_Classifier():
             self.trained = True
 
         #calculate the search windows
-        self.windows = self.__get_windows(img, y_s_t= [375,670])
+        # if self.windows == None:
+        self.windows = self.__get_windows(img, y_s_t= [400,700])
         # get the features from the complete image
         glb_feat = None
         for window in self.windows:
             # get the features for the region
-            #feat = self._
             # does the region contains a car?
             region = img[window[0][1]:window[1][1],window[0][0]:window[1][0]]
             # print("Region:"+ str(region.shape))
             pred = self.predict(region)
             # add the result to the heat map array
-            if self.debug == True:
+            if self.debug:
                 plt.imshow(region)
                 plt.title(str(pred))
                 plt.show()
@@ -295,13 +350,10 @@ class SVM_Classifier():
                 # cv2.waitKey(200)
                 rects.append(window)
         # cv2.destroyAllWindows()
-        print("Windows found: "+ str(len(rects)))
+        # print("Windows found: "+ str(len(rects)))
+        # rects = self.__heat_map(img, rects)
         img_draw = self.__draw_rect(img, rects)
         del rects
-        # plt.imshow(img_draw)
-        # plt.show()
-        #calculate the boxes for each vehicle
-        #draw the boxes in the image
 
         return img_draw
 
