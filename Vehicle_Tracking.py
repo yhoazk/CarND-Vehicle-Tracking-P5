@@ -11,7 +11,6 @@ from glob import glob
 
 def plot_imgArr(img_arr, label=None, predict=None, gray=False, n=2):
     f, arr = plt.subplots(n, 2)
-    print(img_arr[0].shape)
     for n, subplt in enumerate(arr.reshape(-1)):
         if gray:
             subplt.imshow(img_arr[n], cmap='gray')
@@ -92,8 +91,8 @@ def test_classifier3():
 
 
 
-def main_fnc(img):
-    # img = line_lane.camera.undistort(img)
+def main_fnc(img_o):
+    img = line_lane.camera.undistort(img_o)
 
     # test for rgb of video edit tool
 
@@ -104,6 +103,9 @@ def main_fnc(img):
     img = cv2.normalize(img, img.copy(), alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     img = clf.classify(img)
     img = np.multiply(255,img)
+
+    img =  cv2.addWeighted(img, 0.8, line_lane.process(img_o), 0.4, 0)
+
     # cv2.imshow("IMAGE asdasdasdasd", img)
     # cv2.waitKey(100)
     # cv2.destroyAllWindows()
@@ -113,7 +115,7 @@ if "__main__" == __name__:
     # create the instances of the image processing class and SVM Classifier
     img_proc = Image_Processing()
     clf = SVM_Classifier()
-    # line_lane = lane_detector()
+    line_lane = lane_detector()
 
     # test_classifier()
     #test_classifier()
@@ -134,7 +136,6 @@ if "__main__" == __name__:
 
     print("done")
     # Add both images
-    #img_proc.process(lambda img: cv2.addWeighted(clf.classify(line_lane.camera.undistort(img)), 0.8, line_lane.process(img), 0.4, 0))
     #plt.imshow(img)
     #plt.show()
     # process the video, take the output of both and add the result

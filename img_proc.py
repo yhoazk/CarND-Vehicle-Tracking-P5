@@ -35,7 +35,7 @@ class img_proc():
         # Number of corners in y
         ny = 6
         # Pickle file path
-        CAMERA_UNDISTORT_FILE = "/home/porko/workspace/nd_selfDrive/CarND-Advanced-Lane-Lines/output_images/calibration/"
+        CAMERA_UNDISTORT_FILE = "/home/porko/workspace/nd_autocar/CarND-Vehicle-Tracking-P5/"
         # Pickle file name
         CAMERA_PICKLE_NAME = "camera_undist.p"
         if os.path.isfile(CAMERA_UNDISTORT_FILE + CAMERA_PICKLE_NAME ):
@@ -49,8 +49,7 @@ class img_proc():
         objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2)
         objpoints = []  # 3d point in real world space
         imgpoints = []  # 2d points in image plane.
-        imgs = glob("/home/porko/workspace/nd_selfDrive/CarND-Advanced-Lane-Lines/camera_cal/calibration*")
-
+        imgs = glob("/home/porko/workspace/nd_autocar/CarND-Vehicle-Tracking-P5/camera_cal/calib*")
         img_list = [None] * len(imgs)
         for i, path_img in enumerate(imgs):
             img = plt.imread(path_img)
@@ -63,6 +62,8 @@ class img_proc():
                 imgpoints.append(corners)
                 img = cv2.drawChessboardCorners(img, (nx, ny), corners, True)
                 img_list[i] = img.copy()
+            else:
+                print("ret FALSE")
 
         # This function returns the camera matrix (mtx), distortion coefficients and rotation and translation vectors
         h, w = img_list[0].shape[:2]

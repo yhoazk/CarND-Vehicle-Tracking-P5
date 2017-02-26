@@ -100,7 +100,7 @@ def gen_windows(img, x_s_t=[None, None], y_s_t=[None,None], xy_w=(32,32), xy_ove
 
 
 if __name__ == '__main__':
-    img = plt.imread("13.png_")
+    img = plt.imread("sample_00043.png_")
     w = gen_windows(img, y_s_t= [390, 700])
     # w = slide_window(img, y_start_stop=[400,690])
     f1,f2= w[0]

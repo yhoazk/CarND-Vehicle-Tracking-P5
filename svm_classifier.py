@@ -15,6 +15,7 @@ import time
 import pickle
 from scipy.misc import *
 from scipy.ndimage.measurements import label
+from car import *
 
 class SVM_Classifier():
     def __init__(self, type='LinearSVC', *clf_params):
@@ -27,13 +28,13 @@ class SVM_Classifier():
         self.hist_bins = 16
         self.bin_range = (0,256)
         # array to store the windows
-        self.windows = []
+        self.windows = None
         #current window
         self.curr_wind = 0
         # stores hog features
         self.hog_array = None
         # defines the search area
-        self.image_window = ((70,450),(1210,670))
+        self.image_window = ((70, 450), (1210, 670))
         self.model_pickle_path = "./clf.p"
         try:
             with open(self.model_pickle_path, "rb") as pick_clf:
@@ -50,45 +51,105 @@ class SVM_Classifier():
 
         # Target resize for each window
         self.tgt_resize = (64, 64)
-        self.threshold_heat = 1
+        self.threshold_heat = 2
         #type of image to train
 
-        #self positive image dataset
+        # self positive image dataset
         self.feat_p = []
         self.feat_n = []
         self.label_p = []
         self.label_n = []
-        #self.dataset = {'feat_p':self.feat_p, 'feat_n':self.feat_n, 'lbl_p': self.label_p, 'lbl_n': self.label_n}}
         self.dataset = {}
         self.labels = None
         self.features = None
         self.heat_map = None
         self.heat_map_1 = None
         self.heat_map_2 = None
-        self.past_labels = None
-
-    #def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
+        self.cars_boxes = {}
+        # The center location for a car that shall not change between frames more
+        # than the threshold
+        self.cars_centers = {}
+        self.car_obj = None
+        # Max number of pixels for an object to move from frame to frame
+        self.object_th = 400
+        # set the number of frames to average
+        self.avg_frames = 3
 
     def draw_labeled_bboxes(self, labels):
         # Iterate through all detected cars
         boxes = []
-        if self.past_labels is None:
-            self.past_labels = labels
-
+        found_match = False
+        print("Cars found: " + str(labels[1]))
         for car_number in range(1, labels[1] + 1):
-            # Find pixels with each car_number label value
+            # # Find pixels with each car_number label value
+            # if car_number not in self.cars_boxes:
+            #     self.cars_boxes[car_number] = list()
+            #
+            # if car_number not in self.cars_centers:
+            #     self.cars_centers[car_number] = list()
+
             nonzero = (labels[0] == car_number).nonzero()
             # past_nonz = (self.past_labels[0] == car_number).nonzero()
             # Identify x and y values of those pixels
             nonzeroy = np.array(nonzero[0])
             nonzerox = np.array(nonzero[1])
-            # p_nonzeroy = np.array(past_nonz[0])
-            # p_nonzerox = np.array(past_nonz[1])
             # Define a bounding box based on min/max x and y
             current_box = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+            centerx = (current_box[1][0] - current_box[0][0]) + current_box[0][0]
+            centery = (current_box[1][1] - current_box[0][1]) + current_box[0][1]
+            center = (centerx, centery)
+            print("CEnter: " + str(center))
+            # if the object moved more than the offset is a new object
+            # check if the avg center of other car is closer
 
-            boxes.append(current_box)
-            self.past_labels = labels
+            if self.car_obj is None:
+                print("init")
+                self.car_obj = [CAR(xy_loc=(centerx, centery))]
+            else:
+                # fin if the current center is close to the registered
+                # restart the algorithm
+                print("len cars: " + str(len(self.car_obj)))
+                for car in self.car_obj:
+                    print("."),
+                    car.updated = False
+
+                for car in self.car_obj:
+                    print("curr_center: " + str(center) + " car_c: " + str(car.xy_loc))
+                    if car.in_range(center):
+                        print("car in range")
+                        car.add_element(current_box)
+                        # if a matching object was found delete the box
+                        found_match = True
+                        car.updated = True
+                    else:
+                        # no esta en rango, es otro carro nuevo o otro que no ha llegado a la iteracion
+                        print("car NOT in range")
+                        # car.updated = True
+                if not found_match:
+                    # There is no match for this box, probably a new car
+                    found_match = False
+                    print("add new car ")
+                    self.car_obj.append(CAR(xy_loc=(centerx, centery)))
+
+
+
+        # if after iterating on all the elements there is no similar elemnt
+        for car in self.car_obj:
+            if not car.updated:
+                # an box for the car was not found probably not in screen
+                if car.obj_notFound():
+                    # the function returns true if the car was not found after threshold
+                    print("Removing CARRR")
+                    self.car_obj.remove(car)
+
+            # taking the average of the boxes for this car
+            # avg_box = np.mean(np.array(self.cars_boxes[car_number]), axis=0, dtype='int')
+            # avg_box = tuple(map(tuple, avg_box))
+            for car in self.car_obj:
+                rec = car.get_rect()
+                print(rec)
+                boxes.append(rec)
+            # self.past_labels = labels
             # Draw the box on the image
             # cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
         # Return the image
@@ -107,20 +168,15 @@ class SVM_Classifier():
         # w_sizes = np.linspace(72, 190, 5, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
         w_sizes = [72, 72, 164]
         xy_overlap = [0.75, 0.75, 0.75]
-        print(w_sizes)
-        time.sleep(2)
         #  given the overlap find the y start points
         y_start_points = [y_s_t[0]]
         # y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
         y_start_points.extend([y_s_t[0] + ofst for ofst in [20, 20, 20]])
-        print(y_start_points)
         windows = []
         for over, start_pt, w_size in zip(xy_overlap, y_start_points, w_sizes):
             # calculate the number of windows in the first row, and iterate to create them
             # find increment per window
             w_inc = int(w_size * 1.5 * (1.0 - over))
-            print(w_inc)
-            wind_per_row = int(x_range / w_inc)
             for x_start in range(x_s_t[0], x_s_t[1], w_inc):
                 w = ((int(x_start), int(start_pt)), (int(x_start + w_size * 1.5), int(start_pt + w_size * 1.2)))
                 if w[1][0] < x_s_t[1]:
@@ -342,7 +398,6 @@ class SVM_Classifier():
         # plt.imshow(htm)
         # plt.show()
         labels = label(htm)
-        print(labels[0].shape)
         if self.debug:
             f, (a1, a2) = plt.subplots(1, 2)
             a1.imshow(img)
@@ -373,8 +428,8 @@ class SVM_Classifier():
             self.trained = True
 
         #calculate the search windows
-        # if self.windows == None:
-        self.windows = self.__get_windows(img, y_s_t= [390,700])
+        if self.windows is None:
+            self.windows = self.__get_windows(img, y_s_t= [390,700])
         # get the features from the complete image
         glb_feat = None
         for window in self.windows:
@@ -393,7 +448,7 @@ class SVM_Classifier():
                 # cv2.waitKey(200)
                 rects.append(window)
         # cv2.destroyAllWindows()
-        # print("Windows found: "+ str(len(rects)))
+            # print("Windows found: "+ str(len(rects)))
         rects = self.__heat_map(img, rects)
         # tst = np.zeros_like(img[:,:,0])
         # plt.imshow(self.__draw_rect(tst, rects))
