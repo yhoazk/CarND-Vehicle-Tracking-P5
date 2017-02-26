@@ -78,11 +78,13 @@ def test_classifier3():
     for p in imgs_f:
         img = clf.get_normImg(p)
         img = main_fnc(img)
-        img = np.multiply(255, img)
-        img[0][0]
-        cv2.imshow("_", img)
-        cv2.waitKey(100)
-    cv2.destroyAllWindows()
+        plt.imshow(img)
+        plt.show()
+        # img = np.multiply(255, img)
+        # img[0][0]
+        # cv2.imshow("_", img)
+        # cv2.waitKey(100)
+    # cv2.destroyAllWindows()
     # plot_imgArr(imgs, labels, n=5)
 
 
@@ -119,7 +121,7 @@ if "__main__" == __name__:
     # test_classifier1()
     # test_classifier2()
     # test_classifier3()
-    img_proc.read_video("sample_vid_3.mp4", "jpg")
+    img_proc.read_video("project_video.mp4", "jpg")
     img_proc.process(main_fnc)
     exit()
     # img_proc.get_frame(t=20)

@@ -50,7 +50,7 @@ class SVM_Classifier():
 
         # Target resize for each window
         self.tgt_resize = (64, 64)
-        self.threshold_heat = 2
+        self.threshold_heat = 1
         #type of image to train
 
         #self positive image dataset
@@ -65,21 +65,30 @@ class SVM_Classifier():
         self.heat_map = None
         self.heat_map_1 = None
         self.heat_map_2 = None
-        self.heat_map_3 = None
+        self.past_labels = None
 
     #def __calc_windows(self, img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
 
     def draw_labeled_bboxes(self, labels):
         # Iterate through all detected cars
         boxes = []
+        if self.past_labels is None:
+            self.past_labels = labels
+
         for car_number in range(1, labels[1] + 1):
             # Find pixels with each car_number label value
             nonzero = (labels[0] == car_number).nonzero()
+            # past_nonz = (self.past_labels[0] == car_number).nonzero()
             # Identify x and y values of those pixels
             nonzeroy = np.array(nonzero[0])
             nonzerox = np.array(nonzero[1])
+            # p_nonzeroy = np.array(past_nonz[0])
+            # p_nonzerox = np.array(past_nonz[1])
             # Define a bounding box based on min/max x and y
-            boxes.append(((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))))
+            current_box = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+
+            boxes.append(current_box)
+            self.past_labels = labels
             # Draw the box on the image
             # cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
         # Return the image
@@ -96,14 +105,14 @@ class SVM_Classifier():
 
         # define window sizes
         # w_sizes = np.linspace(72, 190, 5, dtype="int32") #array([  32.,   48.,   64.,   80.,   96.,  112.,  128.])
-        w_sizes = [72, 72, 108]
+        w_sizes = [72, 72, 164]
         xy_overlap = [0.75, 0.75, 0.75]
         print(w_sizes)
-        # time.sleep(2)
+        time.sleep(2)
         #  given the overlap find the y start points
         y_start_points = [y_s_t[0]]
         # y_start_points.extend([y_s_t[0]+(1.0-xy_overlap[1])*x for x in w_sizes])
-        y_start_points.extend([y_s_t[0] + ofst for ofst in [20, 72, 100]])
+        y_start_points.extend([y_s_t[0] + ofst for ofst in [20, 20, 20]])
         print(y_start_points)
         windows = []
         for over, start_pt, w_size in zip(xy_overlap, y_start_points, w_sizes):
@@ -113,13 +122,11 @@ class SVM_Classifier():
             print(w_inc)
             wind_per_row = int(x_range / w_inc)
             for x_start in range(x_s_t[0], x_s_t[1], w_inc):
-                w = ((int(x_start), int(start_pt)), (int(x_start + w_size * 1.5), int(start_pt + w_size)))
+                w = ((int(x_start), int(start_pt)), (int(x_start + w_size * 1.5), int(start_pt + w_size * 1.2)))
                 if w[1][0] < x_s_t[1]:
                     # print(w)
                     windows.append(w)
         return windows
-
-
 
     def __bin_spatial(self, img, color_space='RGB'):
         # Convert image to new color space (if specified)
@@ -186,6 +193,15 @@ class SVM_Classifier():
         #cv2.destroyAllWindows()
         return imcopy
 
+    def filter_sq(self, old_sq, new_sq):
+
+        """
+        funcion que tome los centros de la imagen pasada y aplique un cuadro a ese sector, si en el proximo cuadro
+        el heat map dice que hay aun un objeto ahi, se puede asumir que debe ser el mismo, un objeto no desaparecera
+        de un cuadro a otro y si lo hace es un glitch
+        """
+
+        return new_sq
 
     def __extract(self, img):
         """
@@ -305,25 +321,34 @@ class SVM_Classifier():
         if self.heat_map is None:
             self.heat_map = np.zeros_like(img[:, :, 0])
 
-        # back up the last heat map for filtering
         self.heat_map_1 = self.heat_map.copy()
+        # back up the last heat map for filtering
+        if self.heat_map_1 is not None:
+            self.heat_map_2 = self.heat_map_1.copy()
+
         # start a clean heat map
         self.heat_map = np.zeros_like(img[:, :, 0])
 
         for win in p_windows:
             self.heat_map[win[0][1]:win[1][1], win[0][0]:win[1][0]] += 1
 
+        self.heat_map[self.heat_map <= self.threshold_heat] = 0
+        # plt.imshow(self.heat_map)
+        # plt.show()
+        htm = cv2.addWeighted(self.heat_map_2, 0.7, self.heat_map_1, 1.2, 0)
+        # plt.imshow(htm)
+        # plt.show()
+        htm = cv2.addWeighted(self.heat_map, 0.7, htm, 0.3, 0)
+        # plt.imshow(htm)
+        # plt.show()
+        labels = label(htm)
+        print(labels[0].shape)
         if self.debug:
             f, (a1, a2) = plt.subplots(1, 2)
             a1.imshow(img)
             a2.imshow(self.heat_map)
             plt.show()
-
-
-        self.heat_map[self.heat_map <= self.threshold_heat] = 0
         # Average with the past heat maps
-        htm = cv2.addWeighted(self.heat_map, 0.7, self.heat_map_1, 0.3, 0)
-        labels = label(self.heat_map)
         new_windows = self.draw_labeled_bboxes(labels)
 
         # f,(a1,a2) = plt.subplots(1,2)
@@ -370,6 +395,8 @@ class SVM_Classifier():
         # cv2.destroyAllWindows()
         # print("Windows found: "+ str(len(rects)))
         rects = self.__heat_map(img, rects)
+        # tst = np.zeros_like(img[:,:,0])
+        # plt.imshow(self.__draw_rect(tst, rects))
         img_draw = self.__draw_rect(img, rects)
         del rects
 
