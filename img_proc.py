@@ -50,7 +50,8 @@ class img_proc():
         objpoints = []  # 3d point in real world space
         imgpoints = []  # 2d points in image plane.
         imgs = glob("/home/porko/workspace/nd_autocar/CarND-Vehicle-Tracking-P5/camera_cal/calib*")
-        img_list = [None] * len(imgs)
+        img_list = []
+        print(imgs)
         for i, path_img in enumerate(imgs):
             img = plt.imread(path_img)
             g_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -58,10 +59,11 @@ class img_proc():
             ret, corners = cv2.findChessboardCorners(g_img, (nx, ny))
 
             if ret == True:
+                print("true")
                 objpoints.append(objp)
                 imgpoints.append(corners)
                 img = cv2.drawChessboardCorners(img, (nx, ny), corners, True)
-                img_list[i] = img.copy()
+                img_list.append(img.copy())
             else:
                 print("ret FALSE")
 

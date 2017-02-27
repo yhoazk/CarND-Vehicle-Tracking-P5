@@ -102,9 +102,9 @@ def main_fnc(img_o):
     # print(img[0][0])
     img = cv2.normalize(img, img.copy(), alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     img = clf.classify(img)
-    img = np.multiply(255,img)
+    img = np.multiply(255,img).astype(int)
 
-    img =  cv2.addWeighted(img, 0.8, line_lane.process(img_o), 0.4, 0)
+    img = cv2.addWeighted(img, 0.5, line_lane.process(img_o).astype(int), 0.5, 0)
 
     # cv2.imshow("IMAGE asdasdasdasd", img)
     # cv2.waitKey(100)

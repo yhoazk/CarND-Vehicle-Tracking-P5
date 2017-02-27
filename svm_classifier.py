@@ -69,7 +69,7 @@ class SVM_Classifier():
         # The center location for a car that shall not change between frames more
         # than the threshold
         self.cars_centers = {}
-        self.car_obj = None
+        self.car_obj = []
         # Max number of pixels for an object to move from frame to frame
         self.object_th = 400
         # set the number of frames to average
@@ -102,7 +102,7 @@ class SVM_Classifier():
             # if the object moved more than the offset is a new object
             # check if the avg center of other car is closer
 
-            if self.car_obj is None:
+            if len(self.car_obj) == 0:
                 print("init")
                 self.car_obj = [CAR(xy_loc=(centerx, centery))]
             else:
@@ -135,20 +135,25 @@ class SVM_Classifier():
 
         # if after iterating on all the elements there is no similar elemnt
         for car in self.car_obj:
+            print("cars: " + str(len(self.car_obj)))
             if not car.updated:
+                print("not updated")
                 # an box for the car was not found probably not in screen
                 if car.obj_notFound():
                     # the function returns true if the car was not found after threshold
                     print("Removing CARRR")
                     self.car_obj.remove(car)
 
+        for car in self.car_obj:
+            car.updated = False
+
             # taking the average of the boxes for this car
             # avg_box = np.mean(np.array(self.cars_boxes[car_number]), axis=0, dtype='int')
             # avg_box = tuple(map(tuple, avg_box))
-            for car in self.car_obj:
-                rec = car.get_rect()
-                print(rec)
-                boxes.append(rec)
+        for car in self.car_obj:
+            rec = car.get_rect()
+            print(rec)
+            boxes.append(rec)
             # self.past_labels = labels
             # Draw the box on the image
             # cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
