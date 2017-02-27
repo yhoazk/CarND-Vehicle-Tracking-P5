@@ -42,6 +42,10 @@ used in this project for the function are as follows:
 * Pixels per cell = 8
 * cells_per_block = 4
 
+The values were selected because this way the resulting image still had
+identifiable features for the human eye.
+
+
 The usage in this project are in the class [`SVM_Classifier::__hog`](https://github.com/yhoazk/CarND-Vehicle-Tracking-P5/blob/master/svm_classifier.py#L219-L226)
 
 And the function is called with the aftermentioned parameters in:
@@ -49,13 +53,13 @@ And the function is called with the aftermentioned parameters in:
 
 Here is an example of the features:
 
+![](./examples/Hog_sample.png)
+
+![](./examples/hog_sample2.png)
 
 
-The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
 
-I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 
-![alt text][image1]
 
 I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
 
@@ -66,23 +70,50 @@ Here is an example using the `YCrCb` color space and HOG parameters of `orientat
 
 ####2. Explain how you settled on your final choice of HOG parameters.
 
-I tried various combinations of parameters and...
+After getting a good performance with the classifier, the parameters selected are
+the next ones, some are the same as in the examples, but other were tweaked, at
+the end it was clear that window size and location are also a big part of the algorithm.
 
 ####3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
 
-I trained a linear SVM using...
+As suggested in class a linear SVC is being used, a different `C=0.001` yield a better
+result in my case, at the end of the test the result of the trainig the accurracy was
+near to 98% in the test set.
 
 ###Sliding Window Search
 
 ####1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
+This was also a key part for the result, but a bit of common sense helped me out.
+The windowing scheme was selected by analyzing how the classifier was trained.
+The images we used to train the classifier are of cars behind almost paralled to
+the car itself, and the cars that appear in the video are a bit skewed.
 
-![alt text][image3]
+Then we had to make the images given by the windows more like the ones on the
+trainig set, this was done with a rectangular window, rather than a squared, then
+a resize of the window to a square to fit the expected shape.
+
+Here is a sample of the windows used:
+![](./examples/BigWindow.png)
+
+As the cars in the center of the image will appear as smaller a smaller window is needed.
+![](./examples/ExampleSingle.png)
+
+This is a sample of all the windows in a simgle image:
+![](./examples/AllWindows.png)
+
 
 ####2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
 
+Here is a flow diagram for the pipeline:
+![](./Class_flow.png)
+
+
 Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+
+
+
+
 
 ![alt text][image4]
 ---
@@ -93,23 +124,30 @@ Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spat
 Here's a [link to my video result](./project_video.mp4)
 
 
-####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
+#### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+This was the most dificult part as we were relying on the `scipy.ndimage.measurements.label()` method to identify the cars, but a new
+false positive breaks the labels, then a new class was implemented, the [`CAR`](https://github.com/yhoazk/CarND-Vehicle-Tracking-P5/blob/master/car.py) class.
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
+The `CAR` class implements basic filtering and identification functionalities:
+- It tells if a new center of detected object is close to a known object.
+- Takes the average of past locations.
+- Returns the average and a standard frame rectangle for each identified car.
 
-### Here are six frames and their corresponding heatmaps:
+In the function [`svm_classifier.py:draw_labeled_bboxes`](https://github.com/yhoazk/CarND-Vehicle-Tracking-P5/blob/master/svm_classifier.py#L105-L161) is implemented a per object filtering
+whith the next characteristics:
 
-![alt text][image5]
+- If an object is not found after 4 frames is deleted.
+- A new object is first matched with past objects to check if they are similar,
+  this based in location in previous frames.
 
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
+The information abot the locations comes from a heat map implemented in [`svm_classifier.py::__heat_map`](https://github.com/yhoazk/CarND-Vehicle-Tracking-P5/blob/master/svm_classifier.py#L374-L418), this fuction is pretty much as the one given
+in the classroom with a difference that there is also a 3 tap filter implemented with
+`cv2.addWeighted` function for 3 different heat maps.
 
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
-
-
+Here is a sample for the resulting heatmap.
+![](./examples/figure_1-6.png)
+![](./examples/figure_1-7.png)
 
 ---
 
