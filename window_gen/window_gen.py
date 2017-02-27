@@ -12,11 +12,11 @@ def __draw_rect(img, bboxes, color=(0, 0, 255), thick=1):
     imcopy = np.copy(img)
     for n,bbox in enumerate(bboxes):
         # Draw a rectangle given bbox coordinates
-        # cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+        cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
         cv2.imshow("_", imcopy)
         section = imcopy[bbox[0][1]:bbox[1][1],bbox[0][0]:bbox[1][0]]
         print(str(section.shape) + "::" + str(bbox[0][0])+":"+ str(bbox[1][0])+","+ str(bbox[0][1])+":"+ str(bbox[1][1]))
-        cv2.imwrite("sample_"+str(n)+".png", section)
+        # cv2.imwrite("sample_"+str(n)+".png", section)
         cv2.waitKey(100)
     # Return the image copy with boxes drawn
     #cv2.destroyAllWindows()
