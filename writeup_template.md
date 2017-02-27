@@ -108,21 +108,19 @@ This is a sample of all the windows in a simgle image:
 Here is a flow diagram for the pipeline:
 ![](./Class_flow.png)
 
-
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
-
-
-
+At the end the YCrCb channels were used as they give good results and the Cr channel
+was used for HOG transformation along with binned and Histogram information from the
+image.
 
 
-![alt text][image4]
 ---
 
 ### Video Implementation
 
-####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
+#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
 Here's a [link to my video result](./project_video.mp4)
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/OVXSd_9SnSY/0.jpg)](https://www.youtube.com/watch?v=OVXSd_9SnSY)
 
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
@@ -155,4 +153,28 @@ Here is a sample for the resulting heatmap.
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+
+In this project a SVM was used, at the beginning it was akward and somewhat strange, how the results didn't make sense as it was classifying a part of
+solid color of the pavement as a car, until I realized
+that the color was being extracted in a different order and magnitude. Again, I found
+myself with the *garbage in garbage out* situation, then the things got better as I
+took care of the information coherency at each step.
+
+
+Another hard situation is how to filter the location from frame to frame using the
+labels. The problem is that, if we find a false positive then all the labels are
+moved and the locations does not match, the current implementation relies on the
+past locations of the object and it performs an "aceptable" for a start, but a better implementation
+is sure achievable with bit more experience and time.
+
+In order to make this more robust my first step would be an adaptable windowing scheme.
+This scheme will resize the windows according to the horizont and will increase the granularity when it finds an object with a high confidence. For the classifier,
+I think that the dataset can be improved as the images are of cars from
+behind with little skew, more skewed cars as the ones in the video will improve
+the accurracy.
+
+This pipeline will fail in a road where the incoming lanes are not separeted by
+a wall, even in this scenario, incoming traffic it's being detected introducing
+noise, again climate conditions, ilumination, diffent vehicles like Public transport,
+trailers and so on are not in the trainig dataset, also this video is stablilized,
+but an unstable image will make all this unuseful.
